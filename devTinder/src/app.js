@@ -5,14 +5,12 @@ const port = 7000;
 const User = require("./models/user");
 app.use(express.json());
 app.post("/signup", async (req, res) => {
-  // const userObj={
-  //     firstName:'sachin',
-  //     lastName:'tedulakar',
-  //     email:'sachin@gmail.com',
-  //     password:'sachin@123'
-  // }
   const user = new User(req.body);
   console.log(user);
+  if(user?.email==''){
+    throw new Error('Email Id can not be blank');
+    
+  }
   try {
     await user.save();
     res.send("User Added successfully!");
@@ -55,14 +53,27 @@ app.delete("/user",async(req,res)=>{
   }
 })
 
-app.patch("/user",async(req,res)=>{
+
+app.patch("/user/:userId",async(req,res)=>{
   try {
-    const userId=req.body.userId;
+    const NOT_ALLOWED_UPDAES=['email','userId'];
+    const userId=req.params?.userId;
     const data=req.body;
-     const user=await User.findByIdAndUpdate(userId,data);
-     res.send(user+" deleted successfully").status(200)
+     const isUpdateAllowed=Object.keys(data).every(item=>NOT_ALLOWED_UPDAES.includes(item));
+     if(isUpdateAllowed){
+      res.send("Update not allowed").status(401);
+      return
+     }
+     if(data?.skills.length>10){
+      throw new Error('You can add maximum 10 skills');
+     }
+     const user=await User.findByIdAndUpdate(userId,data,{
+      returnDocument:"after",
+      runValidators:true
+     });
+     res.send(user+" user updated successfully").status(200)
   } catch (error) {
-     res.send("something is wrong").status(400)
+     res.send("something is wrong "+error).status(400)
   }
 })
 connectDB()
