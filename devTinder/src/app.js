@@ -3,15 +3,23 @@ const connectDB = require("./config/database");
 const app = express();
 const port = 7000;
 const User = require("./models/user");
+const bcrypt=require("bcrypt");
+const {validateSignupData} =require('./utils/validations');
 app.use(express.json());
 app.post("/signup", async (req, res) => {
-  const user = new User(req.body);
-  console.log(user);
-  if(user?.email==''){
-    throw new Error('Email Id can not be blank');
-    
-  }
+ 
+
   try {
+    validateSignupData(req);
+    const passwordHash=await bcrypt.hash(req.body?.password,10);
+    req.body.password=passwordHash;
+    const user = new User({
+      "firstName":req.body.firstName,
+      "lastName":req.body.lastName,
+      "email":req.body.email,
+      "password":passwordHash,
+      "skills":req.body.skills
+    });
     await user.save();
     res.send("User Added successfully!");
   } catch (err) {
