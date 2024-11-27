@@ -5,10 +5,12 @@ const port = 7000;
 const User = require("./models/user");
 const bcrypt = require("bcrypt");
 const validator = require("validator");
+const cookieParser = require("cookie-parser");
+const jwt = require("jsonwebtoken");
 const { validateSignupData } = require("./utils/validations");
 
 app.use(express.json());
-
+app.use(cookieParser());
 // Signup
 app.post("/signup", async (req, res) => {
   try {
@@ -43,18 +45,40 @@ app.post("/login", async (req, res) => {
     if (!user) {
       throw new Error("Invalid credentials");
     }
-
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       throw new Error("Invalid credentials");
+    } else {
+      const token = jwt.sign({ _id: user._id }, "DEV@TINDER$1804");
+      console.log(token);
+      res.cookie("token", token);
+      res.status(200).send("Login successful!");
     }
-
-    res.status(200).send("Login successful!");
   } catch (err) {
     res.status(400).send("Error while login: Invalid credentials");
   }
 });
 
+app.get("/profile", async (req, res) => {
+  try {
+    const cookie = req.cookies;
+
+    const { token } = cookie;
+    if(!token){
+      throw new Error("invalid Token");
+    }
+    const decodedToken = jwt.verify(token, "DEV@TINDER$1804");
+    const { _id } = decodedToken;
+    console.log("id", _id);
+    const user = await User.findById(_id);
+    if(!user){
+      throw new Error("User does not exist!")
+    }
+    res.status(200).send(user);
+  } catch (error) {
+    res.status(401).send(error.message)
+  }
+});
 // Get User by Email
 app.get("/user", async (req, res) => {
   try {
